@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Thanh Ly Sơn: ĐẠI ĐẠO VÔ HẠN</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+      <div id="hud" class="panel">
+        <div class="top-bar">
+          <div class="stats">
+            <span id="playerName">Linh Tử</span>
+            <span id="playerRealm">Phàm Nhân</span>
+          </div>
+          <div class="stats-right">
+            <span id="mapName">Thành Ly Sơn</span>
+            <button id="saveBtn" class="mini-button">Lưu</button>
+          </div>
+        </div>
+
+        <div class="resource-row">
+          <div class="resource">
+            <label>Máu</label>
+            <div class="bar"><div id="hpBar" class="fill hp"></div></div>
+            <span id="hpText">100 / 100</span>
+          </div>
+          <div class="resource">
+            <label>Linh lực</label>
+            <div class="bar"><div id="qiBar" class="fill qi"></div></div>
+            <span id="qiText">100 / 100</span>
+          </div>
+        </div>
+
+        <div class="info-row">
+          <span>Tu vi: <strong id="tuviValue">0</strong></span>
+          <span>Linh thạch: <strong id="moneyValue">0</strong></span>
+          <span>Đạo tâm: <strong id="xpValue">0</strong></span>
+        </div>
+      </div>
+
+      <div id="questPanel" class="panel side-panel">
+        <h3>Nhiệm vụ</h3>
+        <p id="questText">Tìm trưởng lão Huyền Phong ở Tông Môn để nhận chỉ dẫn.</p>
+      </div>
+
+      <div id="touchControls">
+        <div id="movePad" class="pad">
+          <div id="stick" class="stick"></div>
+        </div>
+
+        <div id="actionButtons">
+          <button id="attackBtn" class="action-btn">Tấn công</button>
+          <button id="skillBtn" class="action-btn secondary">Kỹ năng</button>
+          <button id="interactBtn" class="action-btn secondary">Tương tác</button>
+        </div>
+      </div>
+
+      <div id="toast" class="toast hidden"></div>
+
+      <div id="dialogBox" class="dialog hidden">
+        <div class="dialog-header">
+          <span id="dialogName">NPC</span>
+          <button id="closeDialog" aria-label="Đóng">×</button>
+        </div>
+        <div id="dialogText" class="dialog-text"></div>
+        <div class="dialog-actions">
+          <button id="dialogActionBtn" class="primary-btn">Đồng ý</button>
+        </div>
+      </div>
+
+      <div id="startModal" class="modal active">
+        <div class="modal-card">
+          <h1>Thanh Ly Sơn</h1>
+          <h2>ĐẠI ĐẠO VÔ HẠN</h2>
+          <label>
+            Tên nhân vật
+            <input id="nameInput" type="text" maxlength="18" value="Linh Tử" />
+          </label>
+          <label>
+            Linh căn
+            <select id="elementSelect">
+              <option value="Kim">Kim</option>
+              <option value="Mộc">Mộc</option>
+              <option value="Thủy">Thủy</option>
+              <option value="Hỏa">Hỏa</option>
+              <option value="Thổ">Thổ</option>
+              <option value="Ngũ Hành" selected>Ngũ Hành</option>
+            </select>
+          </label>
+          <button id="startBtn" class="primary-btn">Bắt đầu hành trình</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>

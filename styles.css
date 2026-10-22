@@ -14,8 +14,9 @@ html, body {
 }
 
 body {
-  touch-action: none;
+  touch-action: manipulation;
   user-select: none;
+  overscroll-behavior: none;
 }
 
 button, input, select {
@@ -26,6 +27,7 @@ button, input, select {
   position: relative;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: #0d1724;
   overflow: hidden;
 }
@@ -37,6 +39,7 @@ button, input, select {
   height: 100%;
   display: block;
   background: linear-gradient(#1a2b30, #0d1d24);
+  image-rendering: auto;
 }
 
 .panel {
@@ -51,7 +54,7 @@ button, input, select {
 }
 
 #hud {
-  top: 12px;
+  top: max(12px, env(safe-area-inset-top));
   padding: 10px 12px 12px;
 }
 
@@ -83,7 +86,7 @@ button, input, select {
   font-size: 0.9rem;
 }
 
-.mini-button, .primary-btn, .action-btn, .dialog-actions button {
+.mini-button, .primary-btn, .action-btn, .dialog-actions button, .tab-btn, .window-btn, .item-btn, .shop-btn {
   border: none;
   border-radius: 10px;
   padding: 8px 12px;
@@ -92,7 +95,7 @@ button, input, select {
   transition: transform 0.12s ease, opacity 0.12s ease;
 }
 
-.mini-button, .primary-btn {
+.mini-button, .primary-btn, .window-btn {
   background: linear-gradient(135deg, #ac7dff, #4b9fff);
   color: #fff;
 }
@@ -142,6 +145,24 @@ button, input, select {
   flex-wrap: wrap;
 }
 
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tab-btn {
+  background: rgba(255,255,255,0.06);
+  color: #ebf7ff;
+  border: 1px solid rgba(146,196,255,0.3);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #7b8eff, #4ab7ff);
+  color: white;
+}
+
 #questPanel {
   top: 132px;
   width: 180px;
@@ -162,11 +183,118 @@ button, input, select {
   color: #edf6ff;
 }
 
+.window-panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(86vw, 470px);
+  max-height: 72vh;
+  background: rgba(9, 17, 24, 0.98);
+  border: 1px solid rgba(130, 175, 255, 0.5);
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.38);
+  z-index: 60;
+  overflow: hidden;
+}
+
+.window-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(129, 180, 255, 0.35);
+  background: rgba(18, 32, 42, 0.9);
+  color: #f5d788;
+  font-weight: 700;
+}
+
+.close-btn {
+  background: transparent;
+  color: #fff;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+}
+
+.window-content {
+  padding: 16px;
+  overflow: auto;
+  max-height: calc(72vh - 52px);
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.info-card, .stat-card, .inventory-item, .action-box, .shop-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(146,196,255,0.25);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.info-card h4, .stat-card h4 {
+  margin: 0 0 10px;
+  color: #f1d59a;
+  font-size: 0.85rem;
+}
+
+.info-list {
+  display: grid;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #ebf7ff;
+}
+
+.info-list span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.action-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.action-box button, .item-btn, .shop-btn {
+  background: linear-gradient(135deg, #6ad0bd, #4d8ef2);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.item-grid, .shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.inventory-item, .shop-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #effaff;
+}
+
+.inventory-item strong, .shop-item strong {
+  color: #f3d689;
+}
+
 #touchControls {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: max(0px, env(safe-area-inset-bottom));
   height: 180px;
   pointer-events: none;
   display: flex;
@@ -336,6 +464,32 @@ button, input, select {
   background: rgba(255,255,255,0.03);
   color: #fff;
   padding: 12px 14px;
+}
+
+@media (max-width: 420px) {
+  .panel {
+    left: 8px;
+    right: 8px;
+  }
+
+  #hud {
+    padding: 8px 10px 10px;
+  }
+
+  .stats, .stats-right {
+    gap: 6px;
+  }
+
+  .top-bar,
+  .info-row,
+  .resource-row {
+    gap: 6px;
+  }
+
+  #touchControls {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
 }
 
 @media (min-width: 900px) {

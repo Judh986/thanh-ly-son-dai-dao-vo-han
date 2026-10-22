@@ -24,7 +24,11 @@ const hud = {
   dialogText: document.getElementById('dialogText'),
   dialogActionBtn: document.getElementById('dialogActionBtn'),
   closeDialog: document.getElementById('closeDialog'),
-  saveBtn: document.getElementById('saveBtn')
+  saveBtn: document.getElementById('saveBtn'),
+  modalPanel: document.getElementById('modalPanel'),
+  windowTitle: document.getElementById('windowTitle'),
+  panelContent: document.getElementById('panelContent'),
+  closeWindowBtn: document.getElementById('closeWindowBtn')
 };
 
 const movePad = document.getElementById('movePad');
@@ -35,6 +39,46 @@ const interactBtn = document.getElementById('interactBtn');
 
 const SAVE_KEY = 'thanh-ly-son-save-v1';
 const MAP_SIZE = 2200;
+
+const SHOP_ITEMS = [
+  { id: 'healing-potion', name: 'Đan Hồi Sinh', type: 'potion', price: 25, description: 'Phục hồi 30 máu và 10 linh lực.', rarity: 'Huyền' },
+  { id: 'qi-herb', name: 'Linh Thảo', type: 'herb', price: 18, description: 'Hấp thu linh khí nhanh.', rarity: 'Thường' },
+  { id: 'iron-sword', name: 'Kiếm Sắt', type: 'weapon', price: 60, description: 'Vũ khí sơ cấp phù hợp phàm nhân.', rarity: 'Thường' },
+  { id: 'jade-amulet', name: 'Ngọc Huyền', type: 'amulet', price: 95, description: 'Tăng phòng ngự và tâm thần.', rarity: 'Huyền' }
+];
+
+const CULTIVATION_TIERS = [
+  { realm: 'Phàm Nhân', stage: 'Phàm Nhân', min: 0, max: 9 },
+  { realm: 'Phục Khí', stage: 'Tầng 1', min: 10, max: 19 },
+  { realm: 'Phục Khí', stage: 'Tầng 2', min: 20, max: 29 },
+  { realm: 'Phục Khí', stage: 'Tầng 3', min: 30, max: 39 },
+  { realm: 'Phục Khí', stage: 'Tầng 4', min: 40, max: 49 },
+  { realm: 'Phục Khí', stage: 'Tầng 5', min: 50, max: 59 },
+  { realm: 'Phục Khí', stage: 'Tầng 6', min: 60, max: 69 },
+  { realm: 'Phục Khí', stage: 'Tầng 7', min: 70, max: 79 },
+  { realm: 'Phục Khí', stage: 'Tầng 8', min: 80, max: 89 },
+  { realm: 'Phục Khí', stage: 'Tầng 9', min: 90, max: 99 },
+  { realm: 'Phục Khí', stage: 'Tầng 10', min: 100, max: 109 },
+  { realm: 'Phục Khí', stage: 'Tầng 11', min: 110, max: 119 },
+  { realm: 'Phục Khí', stage: 'Tầng 12', min: 120, max: 129 },
+  { realm: 'Phục Khí', stage: 'Tầng 13', min: 130, max: 149 },
+  { realm: 'Đạo Cơ', stage: 'Sơ kỳ', min: 150, max: 199 },
+  { realm: 'Đạo Cơ', stage: 'Trung kỳ', min: 200, max: 249 },
+  { realm: 'Đạo Cơ', stage: 'Hậu kỳ', min: 250, max: 299 },
+  { realm: 'Đạo Cơ', stage: 'Viên mãn', min: 300, max: 349 },
+  { realm: 'Tử Phủ', stage: 'Sơ kỳ', min: 350, max: 399 },
+  { realm: 'Tử Phủ', stage: 'Trung kỳ', min: 400, max: 449 },
+  { realm: 'Tử Phủ', stage: 'Hậu kỳ', min: 450, max: 499 },
+  { realm: 'Tử Phủ', stage: 'Viên mãn', min: 500, max: 549 },
+  { realm: 'Kim Đan', stage: 'Sơ kỳ', min: 550, max: 599 },
+  { realm: 'Kim Đan', stage: 'Trung kỳ', min: 600, max: 649 },
+  { realm: 'Kim Đan', stage: 'Hậu kỳ', min: 650, max: 699 },
+  { realm: 'Kim Đan', stage: 'Viên mãn', min: 700, max: 749 },
+  { realm: 'Trị Tuế', stage: 'Sơ kỳ', min: 750, max: 799 },
+  { realm: 'Trị Tuế', stage: 'Trung kỳ', min: 800, max: 849 },
+  { realm: 'Trị Tuế', stage: 'Hậu kỳ', min: 850, max: 899 },
+  { realm: 'Trị Tuế', stage: 'Viên mãn', min: 900, max: 999 }
+];
 
 const ELEMENTS = {
   Kim: { speed: 1, power: 1.1, qi: 1.1 },
@@ -178,20 +222,18 @@ const state = {
   touch: { active: false, dx: 0, dy: 0 },
   ui: { interactTarget: null, questStage: 0 },
   toastTimeout: 0,
-  attackCooldown: 0,
-  skillCooldown: 0,
-  saveCooldown: 0,
   player: null,
   camera: { x: 0, y: 0 },
-  ahead: 0
+  activePanel: 'profile'
 };
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-function randomBetween(min, max) {
-  return min + Math.random() * (max - min);
+function getRealmInfo(tuvi) {
+  const realm = CULTIVATION_TIERS.find((entry) => tuvi >= entry.min && tuvi <= entry.max);
+  return realm || CULTIVATION_TIERS[CULTIVATION_TIERS.length - 1];
 }
 
 function showToast(message) {
@@ -202,18 +244,29 @@ function showToast(message) {
 }
 
 function saveGame() {
+  if (!state.player) return;
   const data = {
     name: state.player.name,
     element: state.player.element,
+    talent: state.player.talent,
+    lifespan: state.player.lifespan,
+    title: state.player.title,
+    realm: state.player.realm,
+    realmStage: state.player.realmStage,
+    tuvi: state.player.tuvi,
+    cultivation: state.player.cultivation,
+    hp: state.player.hp,
+    qi: state.player.qi,
+    maxHp: state.player.maxHp,
+    maxQi: state.player.maxQi,
+    money: state.player.money,
+    xp: state.player.xp,
+    reputation: state.player.reputation,
+    inventory: state.player.inventory,
+    equipment: state.player.equipment,
     map: state.currentMap,
     x: state.player.x,
     y: state.player.y,
-    hp: state.player.hp,
-    qi: state.player.qi,
-    realm: state.player.realm,
-    tuvi: state.player.tuvi,
-    money: state.player.money,
-    xp: state.player.xp,
     questStage: state.ui.questStage
   };
 
@@ -225,7 +278,11 @@ function loadGame() {
   const data = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
   if (!data) return false;
 
-  state.player = { ...makePlayer(data.name || 'Linh Tử', data.element || 'Ngũ Hành'), ...data };
+  const player = makePlayer(data.name || 'Linh Tử', data.element || 'Ngũ Hành');
+  Object.assign(player, data);
+  player.hp = Math.min(player.hp || player.maxHp, player.maxHp);
+  player.qi = Math.min(player.qi || player.maxQi, player.maxQi);
+  state.player = player;
   state.currentMap = data.map || 'town';
   state.ui.questStage = data.questStage || 0;
   return true;
@@ -236,7 +293,12 @@ function makePlayer(name, element) {
   return {
     name: name.trim() || 'Linh Tử',
     element,
+    talent: 68,
+    lifespan: 120,
+    title: 'Phàm Tử',
     realm: 'Phàm Nhân',
+    realmStage: 'Phàm Nhân',
+    cultivation: 'Cửu Âm Thần Công',
     tuvi: 0,
     xp: 0,
     money: 32,
@@ -244,18 +306,34 @@ function makePlayer(name, element) {
     maxHp: 100,
     qi: 100,
     maxQi: 100,
-    width: 32,
-    height: 36,
+    strength: 12,
+    defense: 10,
+    divineSense: 5,
+    purity: 42,
     speed: 2.6 * stats.speed,
     power: 14 * stats.power,
+    reputation: 0,
+    inventory: [
+      { id: 'qi-herb', name: 'Linh Thảo', type: 'herb', quantity: 3, rarity: 'Thường', description: 'Hóa linh, thu thập khí.' },
+      { id: 'healing-potion', name: 'Đan Hồi Sinh', type: 'potion', quantity: 2, rarity: 'Huyền', description: 'Khôi phục sinh lực.' },
+      { id: 'currency', name: 'Linh thạch', type: 'currency', quantity: 8, rarity: 'Thường', description: 'Tiền tệ của tu giới.' }
+    ],
+    equipment: {
+      weapon: null,
+      armor: null,
+      accessory: null,
+      amulet: null,
+      shield: null,
+      body: null
+    },
     x: 1000,
     y: 1950,
+    width: 32,
+    height: 36,
     dirX: 0,
     dirY: 0,
     attackTimer: 0,
     skillTimer: 0,
-    lastAttackAt: 0,
-    lastSkillAt: 0,
     isDead: false
   };
 }
@@ -276,22 +354,17 @@ function setPlayerFromModal() {
   centerCameraOnPlayer();
 }
 
+function getCurrentMap() {
+  return worldMaps[state.currentMap];
+}
+
 function normalizeDir(x, y) {
   const mag = Math.hypot(x, y) || 1;
   return { x: x / mag, y: y / mag };
 }
 
-function getCurrentMap() {
-  return worldMaps[state.currentMap];
-}
-
 function rectsIntersect(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-}
-
-function isInsideMap(entity) {
-  const map = getCurrentMap();
-  return entity.x >= 0 && entity.y >= 0 && entity.x + entity.width <= map.width && entity.y + entity.height <= map.height;
 }
 
 function attemptMove(entity, dx, dy) {
@@ -331,8 +404,11 @@ function updateHud() {
   if (!state.player) return;
 
   const p = state.player;
+  const info = getRealmInfo(p.tuvi);
+  p.realm = info.realm;
+  p.realmStage = info.stage;
   hud.playerName.textContent = p.name;
-  hud.playerRealm.textContent = `${p.realm} • ${p.element}`;
+  hud.playerRealm.textContent = `${p.realm} • ${p.realmStage}`;
   hud.mapName.textContent = getCurrentMap().name;
   hud.hpText.textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
   hud.qiText.textContent = `${Math.ceil(p.qi)} / ${p.maxQi}`;
@@ -414,8 +490,7 @@ function tryInteract() {
 function openDialog(npc) {
   hud.dialogBox.classList.remove('hidden');
   hud.dialogName.textContent = `${npc.name} • ${npc.job}`;
-  const baseText = npc.dialog[0];
-  hud.dialogText.textContent = baseText;
+  hud.dialogText.textContent = npc.dialog[0];
   hud.dialogActionBtn.textContent = 'Đồng ý';
   state.ui.interactTarget = npc;
 }
@@ -441,7 +516,7 @@ function handleDialogAction() {
     showToast('Nhiệm vụ hoàn thành: báo cáo với Lý Vô Mưu');
     updateHud();
   } else if (npc.id === 'merchant') {
-    showToast('Hệ thống cửa hàng sẽ được tích hợp trong giai đoạn sau');
+    openPanel('shop');
   }
 
   closeDialog();
@@ -474,20 +549,14 @@ function attack() {
     const mBox = { x: monster.x, y: monster.y, w: 36, h: 36 };
     if (Math.hypot(monster.x - p.x, monster.y - p.y) < attackRange && rectsIntersect(attackBox, mBox)) {
       monster.health -= p.power;
-      showToast(`${monster.id} bị đánh`);
       if (monster.health <= 0) {
         const reward = Math.floor(Math.random() * 16) + 8;
         p.money += reward;
         p.xp += 15;
         p.qi = clamp(p.qi + 8, 0, p.maxQi);
+        p.tuvi += 5;
         map.monsters = map.monsters.filter(m => m.id !== monster.id);
         showToast(`Giết quái: +${reward} linh thạch`);
-        if (p.xp >= 100) {
-          p.tuvi += 1;
-          p.xp = 0;
-          p.hp = p.maxHp;
-          p.qi = p.maxQi;
-        }
       }
     }
   }
@@ -508,6 +577,7 @@ function useSkill() {
         map.monsters = map.monsters.filter(m => m.id !== monster.id);
         state.player.money += 18;
         state.player.xp += 20;
+        state.player.tuvi += 10;
       }
     }
   }
@@ -658,6 +728,344 @@ function render() {
   drawMiniLegend();
 }
 
+function gainCultivation(value) {
+  if (!state.player) return;
+  state.player.tuvi = clamp(state.player.tuvi + value, 0, 999);
+  state.player.qi = clamp(state.player.qi + value * 0.5, 0, state.player.maxQi);
+  state.player.xp += value;
+  const info = getRealmInfo(state.player.tuvi);
+  state.player.realm = info.realm;
+  state.player.realmStage = info.stage;
+  if (state.player.xp > 100) {
+    state.player.xp = 0;
+    state.player.hp = state.player.maxHp;
+  }
+  updateHud();
+}
+
+function ensureInventoryItemById(itemId) {
+  let item = state.player.inventory.find((entry) => entry.id === itemId);
+  if (!item) {
+    item = { id: itemId, name: 'Vật phẩm', type: 'misc', quantity: 0, rarity: 'Thường', description: 'Vật phẩm chưa được khởi tạo' };
+    state.player.inventory.push(item);
+  }
+  return item;
+}
+
+function useInventoryItem(itemId) {
+  const item = ensureInventoryItemById(itemId);
+  if (!item || item.quantity <= 0) {
+    showToast('Không đủ số lượng vật phẩm');
+    return;
+  }
+
+  if (item.type === 'potion') {
+    state.player.hp = clamp(state.player.hp + 30, 0, state.player.maxHp);
+    item.quantity -= 1;
+    showToast('Dùng đan dược: hồi phục sinh lực');
+  } else if (item.type === 'herb') {
+    state.player.qi = clamp(state.player.qi + 22, 0, state.player.maxQi);
+    item.quantity -= 1;
+    showToast('Dùng linh thảo: hấp thu linh lực');
+  } else {
+    showToast('Vật phẩm không thể dùng ngay');
+  }
+
+  if (item.quantity <= 0) {
+    state.player.inventory = state.player.inventory.filter((entry) => entry.id !== itemId || entry.type !== 'currency');
+  }
+  updateHud();
+}
+
+function addInventoryItem(itemId, amount = 1) {
+  const existing = ensureInventoryItemById(itemId);
+  existing.quantity = (existing.quantity || 0) + amount;
+  if (existing.quantity <= 0) {
+    state.player.inventory = state.player.inventory.filter((entry) => entry.id !== itemId);
+  }
+}
+
+function buyItem(itemId) {
+  const item = SHOP_ITEMS.find((entry) => entry.id === itemId);
+  if (!item) return;
+  if (state.player.money < item.price) {
+    showToast('Không đủ linh thạch');
+    return;
+  }
+
+  state.player.money -= item.price;
+  const inventoryItem = ensureInventoryItemById(item.id);
+  inventoryItem.name = item.name;
+  inventoryItem.type = item.type;
+  inventoryItem.rarity = item.rarity;
+  inventoryItem.description = item.description;
+  inventoryItem.quantity = (inventoryItem.quantity || 0) + 1;
+  showToast(`Mua ${item.name} thành công`);
+  updateHud();
+}
+
+function renderProfilePanel() {
+  const p = state.player;
+  const info = getRealmInfo(p.tuvi);
+  hud.windowTitle.textContent = 'Nhân vật';
+  hud.panelContent.innerHTML = `
+    <div class="panel-grid">
+      <div class="info-card">
+        <h4>Thông tin cơ bản</h4>
+        <div class="info-list">
+          <span><b>Tên</b><em>${p.name}</em></span>
+          <span><b>Linh căn</b><em>${p.element}</em></span>
+          <span><b>Tuổi thọ</b><em>${p.lifespan}</em></span>
+          <span><b>Danh hiệu</b><em>${p.title}</em></span>
+        </div>
+      </div>
+      <div class="info-card">
+        <h4>Tu luyện</h4>
+        <div class="info-list">
+          <span><b>Cảnh giới</b><em>${info.realm}</em></span>
+          <span><b>Giai đoạn</b><em>${info.stage}</em></span>
+          <span><b>Tu vi</b><em>${p.tuvi}</em></span>
+          <span><b>Công pháp</b><em>${p.cultivation}</em></span>
+        </div>
+      </div>
+    </div>
+    <div class="action-box">
+      <button class="window-btn" id="meditateBtn">Ngồi thiền hấp thu linh khí</button>
+      <button class="window-btn" id="advanceBtn">Đột phá cảnh giới</button>
+    </div>
+  `;
+
+  document.getElementById('meditateBtn').addEventListener('click', () => {
+    gainCultivation(12);
+    showToast('Ngồi thiền hấp thu linh khí');
+  });
+
+  document.getElementById('advanceBtn').addEventListener('click', () => {
+    if (state.player.tuvi >= 150 && state.player.tuvi < 999) {
+      state.player.tuvi = Math.min(state.player.tuvi + 30, 999);
+      state.player.qi = state.player.maxQi;
+      showToast('Đột phá thành công, cảnh giới tăng lên');
+      updateHud();
+    } else {
+      showToast('Tu vi chưa đạt điều kiện đột phá');
+    }
+  });
+}
+
+function renderCultivationPanel() {
+  const p = state.player;
+  hud.windowTitle.textContent = 'Tu luyện';
+  hud.panelContent.innerHTML = `
+    <div class="panel-grid">
+      <div class="info-card">
+        <h4>Thông số</h4>
+        <div class="info-list">
+          <span><b>Pháp lực</b><em>${p.power}</em></span>
+          <span><b>Thần thức</b><em>${p.divineSense}</em></span>
+          <span><b>Độ tinh thuần</b><em>${p.purity}%</em></span>
+          <span><b>Sức mạnh</b><em>${p.strength}</em></span>
+          <span><b>Phòng ngự</b><em>${p.defense}</em></span>
+        </div>
+      </div>
+      <div class="info-card">
+        <h4>Trạng thái</h4>
+        <div class="info-list">
+          <span><b>Cảnh giới</b><em>${p.realm}</em></span>
+          <span><b>Giai đoạn</b><em>${p.realmStage}</em></span>
+          <span><b>Tu vi</b><em>${p.tuvi}</em></span>
+          <span><b>Linh lực</b><em>${p.qi}/${p.maxQi}</em></span>
+          <span><b>Danh tiếng</b><em>${p.reputation}</em></span>
+        </div>
+      </div>
+    </div>
+    <div class="action-box">
+      <button class="window-btn" id="cultivateBtn">Tu luyện bằng công pháp</button>
+      <button class="window-btn" id="potionBtn">Dùng đan dược</button>
+      <button class="window-btn" id="finishTaskBtn">Hoàn thành nhiệm vụ</button>
+    </div>
+  `;
+
+  document.getElementById('cultivateBtn').addEventListener('click', () => {
+    gainCultivation(15);
+    showToast('Tu luyện công pháp thành công');
+  });
+
+  document.getElementById('potionBtn').addEventListener('click', () => {
+    const potion = state.player.inventory.find((item) => item.id === 'healing-potion');
+    if (!potion || potion.quantity <= 0) {
+      showToast('Không có đan dược để dùng');
+      return;
+    }
+    useInventoryItem('healing-potion');
+    gainCultivation(10);
+  });
+
+  document.getElementById('finishTaskBtn').addEventListener('click', () => {
+    gainCultivation(20);
+    state.player.money += 20;
+    state.player.reputation += 5;
+    showToast('Nhiệm vụ hoàn thành: +20 tu vi, +20 linh thạch');
+  });
+}
+
+function renderInventoryPanel() {
+  hud.windowTitle.textContent = 'Túi đồ';
+  const items = state.player.inventory;
+  hud.panelContent.innerHTML = `
+    <div class="item-grid">
+      ${items.map((item) => `
+        <div class="inventory-item">
+          <strong>${item.name}</strong>
+          <span>Phẩm cấp: ${item.rarity}</span>
+          <span>Số lượng: ${item.quantity}</span>
+          <button class="item-btn" data-item-id="${item.id}">Sử dụng</button>
+        </div>
+      `).join('') || '<div class="inventory-item"><strong>Không có vật phẩm</strong></div>'}
+    </div>
+  `;
+
+  for (const btn of document.querySelectorAll('[data-item-id]')) {
+    btn.addEventListener('click', () => useInventoryItem(btn.dataset.itemId));
+  }
+}
+
+function renderShopPanel() {
+  hud.windowTitle.textContent = 'Cửa hàng';
+  hud.panelContent.innerHTML = `
+    <div class="shop-grid">
+      ${SHOP_ITEMS.map((item) => `
+        <div class="shop-item">
+          <strong>${item.name}</strong>
+          <span>Phẩm cấp: ${item.rarity}</span>
+          <span>Giá: ${item.price} linh thạch</span>
+          <span>${item.description}</span>
+          <button class="shop-btn" data-shop-id="${item.id}">Mua</button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  for (const btn of document.querySelectorAll('[data-shop-id]')) {
+    btn.addEventListener('click', () => buyItem(btn.dataset.shopId));
+  }
+}
+
+function openPanel(panelName) {
+  state.activePanel = panelName;
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.panel === panelName);
+  });
+
+  hud.modalPanel.classList.remove('hidden');
+  if (panelName === 'profile') renderProfilePanel();
+  if (panelName === 'cultivation') renderCultivationPanel();
+  if (panelName === 'inventory') renderInventoryPanel();
+  if (panelName === 'shop') renderShopPanel();
+}
+
+function closePanel() {
+  hud.modalPanel.classList.add('hidden');
+}
+
+function bindKeyEvents() {
+  window.addEventListener('keydown', (event) => {
+    state.keys[event.code] = true;
+    if (event.code === 'Space') {
+      event.preventDefault();
+      attack();
+    }
+    if (event.code === 'KeyJ') {
+      attack();
+    }
+    if (event.code === 'KeyK') {
+      useSkill();
+    }
+    if (event.code === 'KeyE') {
+      tryInteract();
+    }
+    if (event.code === 'KeyP') {
+      openPanel('profile');
+    }
+    if (event.code === 'KeyT') {
+      openPanel('cultivation');
+    }
+    if (event.code === 'KeyI') {
+      openPanel('inventory');
+    }
+    if (event.code === 'KeyB') {
+      openPanel('shop');
+    }
+  });
+
+  window.addEventListener('keyup', (event) => {
+    state.keys[event.code] = false;
+  });
+}
+
+function resizeCanvas() {
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = Math.floor(window.innerWidth * ratio);
+  canvas.height = Math.floor(window.innerHeight * ratio);
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+}
+
+function bindTouchControls() {
+  const padRect = movePad.getBoundingClientRect();
+  let padPointerId = null;
+
+  movePad.addEventListener('pointerdown', (event) => {
+    padPointerId = event.pointerId;
+    event.preventDefault();
+    movePad.setPointerCapture(padPointerId);
+    updateStickFromPointer(event, padRect);
+  });
+
+  movePad.addEventListener('pointermove', (event) => {
+    if (padPointerId !== event.pointerId) return;
+    event.preventDefault();
+    updateStickFromPointer(event, padRect);
+  });
+
+  movePad.addEventListener('pointerup', (event) => {
+    if (padPointerId !== null && event.pointerId === padPointerId) {
+      padPointerId = null;
+    }
+    state.touch.active = false;
+    state.touch.dx = 0;
+    state.touch.dy = 0;
+    stick.style.setProperty('--dx', '0px');
+    stick.style.setProperty('--dy', '0px');
+  });
+
+  attackBtn.addEventListener('click', attack);
+  skillBtn.addEventListener('click', useSkill);
+  interactBtn.addEventListener('click', tryInteract);
+  hud.closeDialog.addEventListener('click', closeDialog);
+  hud.dialogActionBtn.addEventListener('click', handleDialogAction);
+  hud.saveBtn.addEventListener('click', saveGame);
+  hud.closeWindowBtn.addEventListener('click', closePanel);
+
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => openPanel(btn.dataset.panel));
+  });
+
+  function updateStickFromPointer(event, rect) {
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = event.clientX - cx;
+    const dy = event.clientY - cy;
+    const limit = 30;
+    const length = Math.hypot(dx, dy);
+    const clampedX = length > limit ? (dx / length) * limit : dx;
+    const clampedY = length > limit ? (dy / length) * limit : dy;
+    stick.style.setProperty('--dx', `${clampedX}px`);
+    stick.style.setProperty('--dy', `${clampedY}px`);
+    state.touch.dx = clamp(clampedX / 30, -1, 1);
+    state.touch.dy = clamp(clampedY / 30, -1, 1);
+    state.touch.active = true;
+  }
+}
+
 function update(dt) {
   if (!state.player) return;
 
@@ -686,78 +1094,8 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 
-function bindKeyEvents() {
-  window.addEventListener('keydown', (event) => {
-    state.keys[event.code] = true;
-    if (event.code === 'Space') {
-      event.preventDefault();
-      attack();
-    }
-    if (event.code === 'KeyJ') {
-      attack();
-    }
-    if (event.code === 'KeyK') {
-      useSkill();
-    }
-    if (event.code === 'KeyE') {
-      tryInteract();
-    }
-  });
-
-  window.addEventListener('keyup', (event) => {
-    state.keys[event.code] = false;
-  });
-}
-
-function bindTouchControls() {
-  const padRect = movePad.getBoundingClientRect();
-  let padPointerId = null;
-
-  movePad.addEventListener('pointerdown', (event) => {
-    padPointerId = event.pointerId;
-    movePad.setPointerCapture(padPointerId);
-    updateStickFromPointer(event, padRect);
-  });
-
-  movePad.addEventListener('pointermove', (event) => {
-    if (padPointerId !== event.pointerId) return;
-    updateStickFromPointer(event, padRect);
-  });
-
-  movePad.addEventListener('pointerup', () => {
-    padPointerId = null;
-    state.touch.active = false;
-    state.touch.dx = 0;
-    state.touch.dy = 0;
-    stick.style.setProperty('--dx', '0px');
-    stick.style.setProperty('--dy', '0px');
-  });
-
-  attackBtn.addEventListener('click', attack);
-  skillBtn.addEventListener('click', useSkill);
-  interactBtn.addEventListener('click', tryInteract);
-  hud.closeDialog.addEventListener('click', closeDialog);
-  hud.dialogActionBtn.addEventListener('click', handleDialogAction);
-  hud.saveBtn.addEventListener('click', saveGame);
-
-  function updateStickFromPointer(event, rect) {
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = event.clientX - cx;
-    const dy = event.clientY - cy;
-    const limit = 30;
-    const length = Math.hypot(dx, dy);
-    const clampedX = length > limit ? (dx / length) * limit : dx;
-    const clampedY = length > limit ? (dy / length) * limit : dy;
-    stick.style.setProperty('--dx', `${clampedX}px`);
-    stick.style.setProperty('--dy', `${clampedY}px`);
-    state.touch.dx = clamp(clampedX / 30, -1, 1);
-    state.touch.dy = clamp(clampedY / 30, -1, 1);
-    state.touch.active = true;
-  }
-}
-
 function initGame() {
+  resizeCanvas();
   const hasSave = loadGame();
   if (!hasSave) {
     startModal.classList.add('active');
@@ -772,6 +1110,9 @@ function initGame() {
 
   bindKeyEvents();
   bindTouchControls();
+  openPanel('profile');
+  closePanel();
+  window.addEventListener('resize', resizeCanvas);
   requestAnimationFrame(loop);
 }
 
